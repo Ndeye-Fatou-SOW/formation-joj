@@ -111,3 +111,9 @@ Six tâches, dans l'ordre des couches. Chacune commence par écrire son test, le
 - [x] T04 [001-AS1, AS5] Écrire d'abord `infra/drizzle-slot.repository.int.spec.ts` (« 001-AS1: reads back exactly the slot it wrote », « 001-AS5: lets only two of three simultaneous registrations through »), puis `volunteers.schema.ts`, la migration `pnpm db:generate --name=volunteers`, les mappers, `DrizzleSlotRepository` et `DrizzleDisciplineCatalog`
 - [x] T05 [001-AS1, AS2, AS3] Écrire d'abord `apps/api/test/slots.e2e.spec.ts` (« 001-AS1: opens a slot (201) », « 001-AS2: rejects an invalid slot (400, RFC 9457) », « 001-AS3: rejects a slot for an unknown discipline (404) »), puis la route `POST /api/slots` dans `volunteers.controller.ts`, `volunteers.module.ts` et l'import dans `app.module.ts`
 - [x] T06 [001-AS4, AS5, AS6, AS7] Écrire d'abord `apps/api/test/registrations.e2e.spec.ts` (« 001-AS4: registers a volunteer (201) », « 001-AS5: refuses a third volunteer with SLOT_FULL (409) », « 001-AS6: rejects an invalid registration (400) », « 001-AS7: rejects a registration on an unknown slot (404) »), puis la route `POST /api/slots/:slotId/registrations`
+
+## 7. Corrections
+
+### Passage 1
+
+- [ ] T07 [001-AS6] Écrire d'abord, dans `domain/registration.spec.ts` et `apps/api/test/registrations.e2e.spec.ts`, le refus d'un email de plus de 254 caractères (« 001-AS6: rejects an email that is too long »), puis ajouter `VOLUNTEER_EMAIL_MAX_LENGTH = 254` dans `packages/shared/src/volunteers.ts` (limite dans `registerVolunteerSchema`) et le code `REGISTRATION_EMAIL_TOO_LONG` revérifié dans `Registration.create()`. Preuve (relecteur) : `packages/shared/src/volunteers.ts:37` n'a pas de limite, alors que la colonne `email` est en `varchar(254)` (`infra/volunteers.schema.ts:37`) ; un email de 261 caractères passe Zod et le domaine, puis échoue en base (22001) et renvoie un 500 `INTERNAL_ERROR` au lieu d'un 400.
