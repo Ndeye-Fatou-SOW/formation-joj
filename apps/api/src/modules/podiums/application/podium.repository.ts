@@ -9,4 +9,5 @@ export abstract class PodiumRepository {
 /** Port de lecture des résultats officiels des Jeux, par épreuve. */
 export abstract class OfficialResults {
   abstract findByEvent(event: string): Promise<Medals | undefined>;
+  abstract all(): Promise<Medals[]>;
 }

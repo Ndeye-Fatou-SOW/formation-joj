@@ -40,6 +40,17 @@ export const podiumGapSchema = z.object({
 });
 export type PodiumGap = z.infer<typeof podiumGapSchema>;
 
+/** Une ligne du tableau des médailles officiel. */
+export const medalTableRowSchema = z.object({
+  country: z.string(),
+  gold: z.number().int(),
+  silver: z.number().int(),
+  bronze: z.number().int(),
+  total: z.number().int(),
+});
+export const medalTableSchema = z.array(medalTableRowSchema);
+export type MedalTableRow = z.infer<typeof medalTableRowSchema>;
+
 /** Un podium tel que l'API le renvoie. */
 export const podiumSchema = z.object({
   id: z.uuid(),

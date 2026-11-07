@@ -1,27 +1,35 @@
-import type { Medal, PodiumGap, PodiumResponse, PodiumStatus } from '@joj/shared';
+import type { Medal, MedalTableRow, PodiumGap, PodiumResponse, PodiumStatus } from '@joj/shared';
 import { useEffect, useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { podiumsApi } from '../api/podiums.api';
 
-/** Le verdict, en grand bandeau coloré. */
-const STATUS_STYLES: Record<PodiumStatus, { label: string; banner: string; text: string }> = {
+/**
+ * Style « Genesis » : cartes blanches à bordure fine, indigo pour l'interactif seulement,
+ * couleurs sémantiques pour le statut. Le verdict s'affiche comme un tampon officiel.
+ */
+const STATUS_STYLES: Record<PodiumStatus, { label: string; stamp: string; text: string }> = {
   certifie: {
-    label: '✅ CERTIFIÉ',
-    banner: 'bg-emerald-600 text-white',
-    text: 'Identique au résultat officiel des Jeux : vous pouvez publier.',
+    label: 'Certifié',
+    stamp: 'border-[#10B981] text-[#10B981]',
+    text: 'Identique au résultat officiel des Jeux. Vous pouvez publier.',
   },
   'en-ecart': {
-    label: '🔎 À VÉRIFIER',
-    banner: 'bg-amber-400 text-amber-950',
-    text: 'Votre podium diffère du résultat officiel : regardez les médailles signalées.',
+    label: 'À vérifier',
+    stamp: 'border-[#EF4444] text-[#EF4444]',
+    text: 'Différent du résultat officiel sur les médailles signalées.',
   },
   provisoire: {
-    label: '⏳ PROVISOIRE',
-    banner: 'bg-sky-500 text-white',
+    label: 'Provisoire',
+    stamp: 'border-[#F59E0B] text-[#F59E0B]',
     text: 'Les Jeux n’ont pas encore publié le résultat officiel de cette épreuve.',
   },
+};
+
+/** Ce que dit la mascotte selon le verdict. */
+const MASCOT_LINES: Record<PodiumStatus, string> = {
+  certifie: 'Wóor na ! Podium certifié.',
+  'en-ecart': 'Oups ! Vérifie avant de publier.',
+  provisoire: 'Patience, le résultat officiel arrive.',
 };
 
 /** Les épreuves proposées ; les quatre premières ont un résultat officiel. */
@@ -51,30 +59,21 @@ const COUNTRIES: Record<string, string> = {
 
 const countryName = (code: string) => COUNTRIES[code] ?? code;
 
-/** Une grande carte par médaille, chacune dans sa couleur. */
-const MEDAL_CARDS: ReadonlyArray<{
+const MEDAL_ROWS: ReadonlyArray<{
   medal: Medal;
   key: 'gold' | 'silver' | 'bronze';
   icon: string;
   title: string;
-  card: string;
 }> = [
-  { medal: 'or', key: 'gold', icon: '🥇', title: 'OR', card: 'from-yellow-300 to-amber-500' },
-  {
-    medal: 'argent',
-    key: 'silver',
-    icon: '🥈',
-    title: 'ARGENT',
-    card: 'from-slate-200 to-slate-400',
-  },
-  {
-    medal: 'bronze',
-    key: 'bronze',
-    icon: '🥉',
-    title: 'BRONZE',
-    card: 'from-orange-300 to-orange-600',
-  },
+  { medal: 'or', key: 'gold', icon: '🥇', title: 'Or' },
+  { medal: 'argent', key: 'silver', icon: '🥈', title: 'Argent' },
+  { medal: 'bronze', key: 'bronze', icon: '🥉', title: 'Bronze' },
 ];
+
+const FIELD =
+  'h-[38px] rounded-md border border-[#E8E8EC] bg-white px-3.5 text-sm text-[#0A0A0A] shadow-none focus-visible:border-[#6366F1] focus-visible:ring-[3px] focus-visible:ring-[#6366F1]/15';
+const OVERLINE = 'text-[11px] font-medium tracking-[0.12em] text-[#9C9C9C] uppercase';
+const HEADING = 'font-[General_Sans,sans-serif] font-bold tracking-[-0.03em]';
 
 type Form = { journalist: string; event: string; gold: string; silver: string; bronze: string };
 
@@ -125,119 +124,194 @@ export function PodiumPage() {
     shown?.gaps.find((gap) => gap.medal === medal);
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-black/5">
-      {/* Bandeau aux couleurs du Sénégal. */}
-      <div className="flex h-3">
-        <div className="flex-1 bg-emerald-600" />
-        <div className="flex-1 bg-yellow-400" />
-        <div className="flex-1 bg-red-600" />
-      </div>
-
-      <header className="flex flex-col items-center gap-1 bg-gradient-to-b from-yellow-50 to-white px-6 pt-8 pb-4 text-center">
-        <span className="text-xs font-bold tracking-[0.3em] text-emerald-700 uppercase">
-          JOJ Dakar 2026
-        </span>
-        <h1 className="text-6xl font-black tracking-[0.15em] text-slate-900">
-          N<span className="text-emerald-600">D</span>
-          <span className="text-yellow-500">A</span>
-          <span className="text-red-600">M</span>
-        </h1>
-        <p className="text-slate-600">
-          La victoire, vérifiée en direct contre les résultats officiels.
-        </p>
-      </header>
-
-      <div className="flex flex-col gap-6 px-5 pb-6 sm:px-8 sm:pb-8">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="journalist">Journaliste</Label>
-            <Input
-              id="journalist"
-              value={form.journalist}
-              placeholder="Votre nom"
-              maxLength={100}
-              onChange={(e) => set('journalist')(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="event">Épreuve</Label>
-            <NativeSelect
-              id="event"
-              value={form.event}
-              onChange={(e) => set('event')(e.target.value)}
-            >
-              <option value="">Choisir une épreuve</option>
-              {EVENTS.map((event) => (
-                <option key={event} value={event}>
-                  {event}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
+    <div className="flex flex-col gap-16">
+      <section className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-end">
+        <div className="flex max-w-xl flex-col gap-4">
+          <p className={OVERLINE}>JOJ Dakar 2026 · Résultats certifiés</p>
+          <h1 className={`${HEADING} text-6xl leading-[1] sm:text-[72px]`}>
+            La victoire,
+            <br />
+            <span className="text-[#20970B]">vérifiée.</span>
+          </h1>
+          <p className="text-[15px] leading-relaxed text-[#6B6B6B]">
+            Ndam compare chaque podium saisi par un journaliste aux résultats officiels des Jeux,
+            avant qu’il soit publié. Une erreur arrêtée ici ne fait pas le tour des réseaux.
+          </p>
         </div>
+        <div className="relative flex items-end gap-3">
+          <span
+            aria-hidden="true"
+            className="absolute -top-10 left-0 animate-spin text-6xl [animation-duration:3s]"
+          >
+            🏀
+          </span>
+          <p className="mb-16 max-w-40 rounded-xl border border-[#E8E8EC] bg-white px-3 py-2 text-[13px] font-medium">
+            {shown ? MASCOT_LINES[shown.status] : 'Montre-moi ton podium !'}
+          </p>
+          <img
+            src="/ayo.png"
+            alt="Ayo, la mascotte des JOJ Dakar 2026"
+            className="h-44 w-auto rounded-xl"
+          />
+        </div>
+      </section>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {MEDAL_CARDS.map((card) => {
-            const gap = gapFor(card.medal);
-            return (
-              <div
-                key={card.key}
-                className={`flex flex-col gap-3 rounded-2xl bg-gradient-to-br p-4 shadow-md transition ${card.card} ${gap ? 'ring-4 ring-red-500' : ''}`}
+      <section id="podium" className="grid scroll-mt-20 gap-6 lg:grid-cols-[1.4fr_1fr]">
+        {/* Saisie. */}
+        <div className="flex flex-col gap-6 rounded-xl border border-[#E8E8EC] bg-white p-6">
+          <div className="flex flex-col gap-1">
+            <p className={OVERLINE}>Étape 1</p>
+            <h2 className={`${HEADING} text-2xl`}>Le podium constaté</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-[13px] font-medium text-[#6B6B6B]">
+              Journaliste
+              <input
+                value={form.journalist}
+                placeholder="Votre nom"
+                maxLength={100}
+                className={`${FIELD} outline-none placeholder:text-[#9C9C9C]`}
+                onChange={(e) => set('journalist')(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-[13px] font-medium text-[#6B6B6B]">
+              Épreuve
+              <NativeSelect
+                value={form.event}
+                className={FIELD}
+                onChange={(e) => set('event')(e.target.value)}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-4xl">{card.icon}</span>
-                  <span className="text-lg font-black tracking-widest text-slate-900/80">
-                    {card.title}
-                  </span>
-                </div>
-                <NativeSelect
-                  aria-label={`Pays médaillé ${card.medal}`}
-                  value={form[card.key]}
-                  className="bg-white/95 font-semibold"
-                  onChange={(e) => set(card.key)(e.target.value)}
-                >
-                  <option value="">Choisir un pays</option>
-                  {Object.entries(COUNTRIES).map(([code, nameFr]) => (
-                    <option key={code} value={code}>
-                      {nameFr} ({code})
-                    </option>
-                  ))}
-                </NativeSelect>
-                {gap && (
-                  <p className="rounded-lg bg-white/90 px-3 py-1.5 text-sm text-slate-800">
-                    Officiel : <strong>{countryName(gap.official)}</strong>
-                  </p>
-                )}
-              </div>
-            );
-          })}
+                <option value="">Choisir une épreuve</option>
+                {EVENTS.map((event) => (
+                  <option key={event} value={event}>
+                    {event}
+                  </option>
+                ))}
+              </NativeSelect>
+            </label>
+          </div>
+          <ul className="flex flex-col divide-y divide-[#E8E8EC] rounded-lg border border-[#E8E8EC]">
+            {MEDAL_ROWS.map((row) => {
+              const gap = gapFor(row.medal);
+              return (
+                <li key={row.key} className="flex flex-wrap items-center gap-4 px-4 py-3">
+                  <span className="text-2xl">{row.icon}</span>
+                  <span className="w-16 text-sm font-medium">{row.title}</span>
+                  <NativeSelect
+                    aria-label={`Pays médaillé ${row.medal}`}
+                    value={form[row.key]}
+                    className={`${FIELD} flex-1`}
+                    onChange={(e) => set(row.key)(e.target.value)}
+                  >
+                    <option value="">Choisir un pays</option>
+                    {Object.entries(COUNTRIES).map(([code, nameFr]) => (
+                      <option key={code} value={code}>
+                        {nameFr} ({code})
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  {gap && (
+                    <span className="rounded-full bg-[#EF4444]/10 px-3 py-1 text-xs font-medium text-[#EF4444]">
+                      Officiel : {countryName(gap.official)}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
-        <div aria-live="polite">
-          {duplicate && (
-            <p className="rounded-2xl bg-amber-100 px-5 py-4 text-center font-semibold text-amber-900">
-              Un même pays ne peut pas recevoir deux médailles.
-            </p>
-          )}
-          {error && (
-            <p className="rounded-2xl bg-slate-100 px-5 py-4 text-center text-slate-800">{error}</p>
-          )}
-          {!complete && !duplicate && (
-            <p className="rounded-2xl border-2 border-dashed border-slate-200 px-5 py-4 text-center text-slate-500">
-              Choisissez l’épreuve et les trois pays : le verdict s’affiche ici.
-            </p>
-          )}
-          {shown && status && (
-            <div
-              className={`flex flex-col items-center gap-1 rounded-2xl px-5 py-5 text-center shadow-lg ${status.banner}`}
-            >
-              <span className="text-3xl font-black tracking-wider">{status.label}</span>
-              <span className="font-semibold">{shown.event}</span>
-              <span className="opacity-90">{status.text}</span>
-            </div>
-          )}
+        {/* Verdict : un tampon officiel. */}
+        <div
+          aria-live="polite"
+          className="flex flex-col justify-between gap-6 rounded-xl border border-[#E8E8EC] bg-white p-6"
+        >
+          <div className="flex flex-col gap-1">
+            <p className={OVERLINE}>Étape 2</p>
+            <h2 className={`${HEADING} text-2xl`}>Le verdict</h2>
+          </div>
+          <div className="flex min-h-48 items-center justify-center">
+            {shown && status ? (
+              <div
+                key={`${shown.id}`}
+                className={`flex -rotate-6 animate-[stamp_350ms_ease-out] flex-col items-center gap-1 rounded-lg border-4 border-double px-6 py-4 ${status.stamp}`}
+              >
+                <span className={`${HEADING} text-4xl uppercase`}>{status.label}</span>
+                <span className="text-xs font-medium tracking-[0.2em] uppercase">
+                  Ndam · {shown.event}
+                </span>
+              </div>
+            ) : (
+              <p className="text-center text-sm text-[#9C9C9C]">
+                {duplicate
+                  ? 'Un même pays ne peut pas recevoir deux médailles.'
+                  : (error ?? 'Le tampon apparaît dès que le podium est complet.')}
+              </p>
+            )}
+          </div>
+          <p className="text-sm text-[#6B6B6B]">
+            {status ? status.text : 'Comparaison avec les résultats officiels des Jeux.'}
+          </p>
         </div>
-      </div>
+      </section>
+
+      <MedalTable />
     </div>
+  );
+}
+
+/** Le tableau des médailles, calculé sur les seuls résultats officiels. */
+function MedalTable() {
+  const [rows, setRows] = useState<MedalTableRow[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    podiumsApi.medalTable(controller.signal).then(setRows, () => undefined);
+    return () => controller.abort();
+  }, []);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section id="medailles" className="flex scroll-mt-20 flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <p className={OVERLINE}>Résultats officiels uniquement</p>
+        <h2 className={`${HEADING} text-[32px]`}>Tableau des médailles</h2>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-[#E8E8EC] bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-[#E8E8EC] text-xs text-[#9C9C9C]">
+            <tr>
+              <th className="px-4 py-3 font-medium">#</th>
+              <th className="px-4 py-3 font-medium">Pays</th>
+              <th className="px-4 py-3 text-center font-medium">🥇</th>
+              <th className="px-4 py-3 text-center font-medium">🥈</th>
+              <th className="px-4 py-3 text-center font-medium">🥉</th>
+              <th className="px-4 py-3 text-center font-medium">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#E8E8EC]">
+            {rows.map((row, index) => (
+              <tr key={row.country} className="transition hover:bg-[#FAFAFA]">
+                <td className="px-4 py-3 text-[#9C9C9C]">{index + 1}</td>
+                <td className="px-4 py-3 font-medium">
+                  {countryName(row.country)}
+                  {row.country === 'SEN' && (
+                    <span className="ml-2 rounded-full bg-[#20970B]/10 px-2 py-0.5 text-xs text-[#20970B]">
+                      Sénégal 🇸🇳
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center">{row.gold}</td>
+                <td className="px-4 py-3 text-center">{row.silver}</td>
+                <td className="px-4 py-3 text-center">{row.bronze}</td>
+                <td className="px-4 py-3 text-center font-medium">{row.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-[#9C9C9C]">Données fictives pour la démo.</p>
+    </section>
   );
 }

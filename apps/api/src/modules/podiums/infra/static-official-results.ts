@@ -15,4 +15,8 @@ export class StaticOfficialResults extends OfficialResults {
   async findByEvent(event: string): Promise<Medals | undefined> {
     return OFFICIAL_RESULTS[eventKey(event)];
   }
+
+  async all(): Promise<Medals[]> {
+    return Object.values(OFFICIAL_RESULTS);
+  }
 }
