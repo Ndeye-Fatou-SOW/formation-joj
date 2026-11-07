@@ -1,25 +1,31 @@
 import type { PodiumResponse, PodiumStatus } from '@joj/shared';
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { podiumsApi } from '../api/podiums.api';
 
-const STATUS_STYLES: Record<PodiumStatus, { label: string; className: string; text: string }> = {
+/** Couleurs douces : un liseré à gauche et un fond pâle, sans cadre qui couvre la page. */
+const STATUS_STYLES: Record<
+  PodiumStatus,
+  { label: string; panel: string; badge: string; text: string }
+> = {
   certifie: {
     label: '✅ Certifié',
-    className: 'border-emerald-600 bg-emerald-50 text-emerald-800',
+    panel: 'border-l-4 border-emerald-500 bg-emerald-50/80',
+    badge: 'bg-emerald-600 text-white',
     text: 'Identique au résultat officiel des Jeux : vous pouvez publier.',
   },
   'en-ecart': {
-    label: '⛔ En écart',
-    className: 'border-red-600 bg-red-50 text-red-800',
-    text: 'Différent du résultat officiel : ne publiez pas avant de vérifier.',
+    label: '🔎 À vérifier',
+    panel: 'border-l-4 border-orange-400 bg-orange-50/80',
+    badge: 'bg-orange-500 text-white',
+    text: 'Votre podium diffère du résultat officiel sur les médailles ci-dessous.',
   },
   provisoire: {
     label: '⏳ Provisoire',
-    className: 'border-amber-500 bg-amber-50 text-amber-800',
+    panel: 'border-l-4 border-sky-400 bg-sky-50/80',
+    badge: 'bg-sky-600 text-white',
     text: 'Les Jeux n’ont pas encore publié le résultat officiel de cette épreuve.',
   },
 };
@@ -52,6 +58,14 @@ const COUNTRIES: Record<string, string> = {
 };
 
 const countryName = (code: string) => COUNTRIES[code] ?? code;
+
+/** Fond décoratif : des anneaux colorés en motif, sur un dégradé chaud de Dakar. */
+const PATTERN = `url("data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" fill="none" stroke-width="3" opacity="0.18">' +
+    '<circle cx="40" cy="40" r="22" stroke="#0e9f6e"/><circle cx="120" cy="60" r="16" stroke="#f59e0b"/>' +
+    '<circle cx="70" cy="120" r="26" stroke="#ef4444"/><circle cx="140" cy="140" r="10" stroke="#0ea5e9"/>' +
+    '</svg>',
+)}")`;
 
 type Form = { journalist: string; event: string; gold: string; silver: string; bronze: string };
 
@@ -98,7 +112,12 @@ export function PodiumPage() {
   const countrySelect = (name: 'gold' | 'silver' | 'bronze', label: string) => (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={name}>{label}</Label>
-      <NativeSelect id={name} value={form[name]} onChange={(e) => set(name)(e.target.value)}>
+      <NativeSelect
+        id={name}
+        value={form[name]}
+        className="bg-white"
+        onChange={(e) => set(name)(e.target.value)}
+      >
         <option value="">Choisir un pays</option>
         {Object.entries(COUNTRIES).map(([code, nameFr]) => (
           <option key={code} value={code}>
@@ -114,110 +133,106 @@ export function PodiumPage() {
   const status = shown ? STATUS_STYLES[shown.status] : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl bg-gradient-to-r from-emerald-700 via-yellow-500 to-red-600 p-6 text-white shadow">
-        <h1 className="text-3xl font-bold">Ndam</h1>
-        <p className="mt-1 text-white/90">
-          Vérifiez un podium contre les résultats officiels des JOJ Dakar 2026 avant de le publier.
+    <div
+      className="flex flex-col gap-6 rounded-3xl bg-gradient-to-br from-amber-100 via-orange-50 to-emerald-100 p-4 shadow-inner sm:p-8"
+      style={{ backgroundImage: PATTERN }}
+    >
+      <header className="flex flex-col gap-1 text-center">
+        <p className="text-sm font-semibold tracking-widest text-orange-700 uppercase">
+          JOJ Dakar 2026
         </p>
-      </section>
+        <h1 className="bg-gradient-to-r from-emerald-700 via-amber-500 to-red-600 bg-clip-text text-5xl font-extrabold text-transparent">
+          Ndam
+        </h1>
+        <p className="text-slate-700">
+          Le podium constaté, comparé en direct aux résultats officiels des Jeux.
+        </p>
+      </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Le podium constaté</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="journalist">Journaliste</Label>
-              <Input
-                id="journalist"
-                value={form.journalist}
-                placeholder="Votre nom"
-                maxLength={100}
-                onChange={(e) => set('journalist')(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="event">Épreuve</Label>
-              <NativeSelect
-                id="event"
-                value={form.event}
-                onChange={(e) => set('event')(e.target.value)}
-              >
-                <option value="">Choisir une épreuve</option>
-                {EVENTS.map((event) => (
-                  <option key={event} value={event}>
-                    {event}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
+      <div className="flex flex-col gap-5 rounded-2xl bg-white/90 p-5 shadow-lg backdrop-blur sm:p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="journalist">Journaliste</Label>
+            <Input
+              id="journalist"
+              value={form.journalist}
+              placeholder="Votre nom"
+              maxLength={100}
+              className="bg-white"
+              onChange={(e) => set('journalist')(e.target.value)}
+            />
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {countrySelect('gold', '🥇 Or')}
-            {countrySelect('silver', '🥈 Argent')}
-            {countrySelect('bronze', '🥉 Bronze')}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="event">Épreuve</Label>
+            <NativeSelect
+              id="event"
+              value={form.event}
+              className="bg-white"
+              onChange={(e) => set('event')(e.target.value)}
+            >
+              <option value="">Choisir une épreuve</option>
+              {EVENTS.map((event) => (
+                <option key={event} value={event}>
+                  {event}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
-          {!complete && !duplicate && (
-            <p className="text-sm text-muted-foreground">
-              Le résultat s’affiche automatiquement dès que le podium est complet.
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          {countrySelect('gold', '🥇 Or')}
+          {countrySelect('silver', '🥈 Argent')}
+          {countrySelect('bronze', '🥉 Bronze')}
+        </div>
+
+        {/* Le résultat s'affiche ici, juste après le bronze. */}
+        <div aria-live="polite">
+          {duplicate && (
+            <p className="rounded-lg border-l-4 border-orange-400 bg-orange-50 px-4 py-3 text-orange-900">
+              Un même pays ne peut pas recevoir deux médailles.
             </p>
           )}
-        </CardContent>
-      </Card>
-
-      {duplicate && (
-        <p role="alert" className="rounded-lg border border-red-600 bg-red-50 p-4 text-red-800">
-          Un même pays ne peut pas recevoir deux médailles.
-        </p>
-      )}
-
-      {error && (
-        <p role="alert" className="rounded-lg border border-red-600 bg-red-50 p-4 text-red-800">
-          {error}
-        </p>
-      )}
-
-      {shown && status && (
-        <section
-          aria-live="polite"
-          className={`flex flex-col gap-3 rounded-xl border-2 p-5 ${status.className}`}
-        >
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-semibold">{shown.event}</h2>
-            <span className="rounded-full border border-current px-3 py-1 text-sm font-bold">
-              {status.label}
-            </span>
-          </div>
-          <p>{status.text}</p>
-          <p className="font-medium">
-            🥇 {countryName(shown.gold)} · 🥈 {countryName(shown.silver)} · 🥉{' '}
-            {countryName(shown.bronze)}
-            <span className="font-normal"> — saisi par {shown.journalist}</span>
-          </p>
-          {shown.gaps.length > 0 && (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr>
-                  <th className="py-1">Médaille</th>
-                  <th className="py-1">Saisi</th>
-                  <th className="py-1">Officiel</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.gaps.map((gap) => (
-                  <tr key={gap.medal} className="border-t border-current/30">
-                    <td className="py-1">{MEDAL_LABELS[gap.medal]}</td>
-                    <td className="py-1 line-through">{countryName(gap.submitted)}</td>
-                    <td className="py-1 font-bold">{countryName(gap.official)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {error && (
+            <p className="rounded-lg border-l-4 border-slate-400 bg-slate-50 px-4 py-3 text-slate-800">
+              {error}
+            </p>
           )}
-        </section>
-      )}
+          {!complete && !duplicate && (
+            <p className="text-center text-sm text-slate-500">
+              Choisissez l’épreuve et les trois pays : le résultat s’affiche ici automatiquement.
+            </p>
+          )}
+          {shown && status && (
+            <div className={`flex flex-col gap-3 rounded-lg px-4 py-3 ${status.panel}`}>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`rounded-full px-3 py-1 text-sm font-bold ${status.badge}`}>
+                  {status.label}
+                </span>
+                <span className="font-semibold text-slate-800">{shown.event}</span>
+              </div>
+              <p className="text-slate-700">{status.text}</p>
+              {shown.gaps.length > 0 && (
+                <ul className="flex flex-col gap-1.5">
+                  {shown.gaps.map((gap) => (
+                    <li key={gap.medal} className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="font-semibold">{MEDAL_LABELS[gap.medal]}</span>
+                      <span className="text-slate-500">vous avez choisi</span>
+                      <span className="rounded bg-white px-2 py-0.5">
+                        {countryName(gap.submitted)}
+                      </span>
+                      <span className="text-slate-500">→ officiel</span>
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
+                        {countryName(gap.official)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
