@@ -1,4 +1,4 @@
-﻿# PRD — Ndam bu wóor : résultats certifiés
+# PRD — Ndam : résultats certifiés
 
 **Statut** : Validé
 

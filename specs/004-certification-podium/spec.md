@@ -1,7 +1,7 @@
-﻿# 004 — Ndam bu wóor : comparer un podium aux résultats officiels
+# 004 — Ndam : comparer un podium aux résultats officiels
 
 **Statut** : Validée
-**PRD** : specs/prd-ndam-bu-woor.md, TR1
+**PRD** : specs/prd-ndam.md, TR1
 
 ## Contexte
 
