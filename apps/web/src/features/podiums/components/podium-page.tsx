@@ -1,24 +1,24 @@
 import type { PodiumResponse, PodiumStatus } from '@joj/shared';
-import { type FormEvent, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import { podiumsApi } from '../api/podiums.api';
 
 const STATUS_STYLES: Record<PodiumStatus, { label: string; className: string; text: string }> = {
   certifie: {
-    label: 'Certifié',
+    label: '✅ Certifié',
     className: 'border-emerald-600 bg-emerald-50 text-emerald-800',
     text: 'Identique au résultat officiel des Jeux : vous pouvez publier.',
   },
   'en-ecart': {
-    label: 'En écart',
+    label: '⛔ En écart',
     className: 'border-red-600 bg-red-50 text-red-800',
     text: 'Différent du résultat officiel : ne publiez pas avant de vérifier.',
   },
   provisoire: {
-    label: 'Provisoire',
+    label: '⏳ Provisoire',
     className: 'border-amber-500 bg-amber-50 text-amber-800',
     text: 'Les Jeux n’ont pas encore publié le résultat officiel de cette épreuve.',
   },
@@ -26,44 +26,92 @@ const STATUS_STYLES: Record<PodiumStatus, { label: string; className: string; te
 
 const MEDAL_LABELS = { or: '🥇 Or', argent: '🥈 Argent', bronze: '🥉 Bronze' } as const;
 
-const EMPTY = { journalist: '', event: '', gold: '', silver: '', bronze: '' };
+/** Les épreuves proposées ; les quatre premières ont un résultat officiel. */
+const EVENTS = [
+  '100 m filles',
+  'Saut en longueur filles',
+  'Lutte -60 kg garçons',
+  'Basketball 3x3 filles',
+  '1500 m garçons',
+  'Aviron de mer garçons',
+];
+
+const COUNTRIES: Record<string, string> = {
+  BRA: 'Brésil',
+  CHN: 'Chine',
+  CIV: 'Côte d’Ivoire',
+  EGY: 'Égypte',
+  USA: 'États-Unis',
+  FRA: 'France',
+  GAM: 'Gambie',
+  JPN: 'Japon',
+  KEN: 'Kenya',
+  MAR: 'Maroc',
+  NGA: 'Nigeria',
+  SEN: 'Sénégal',
+};
+
+const countryName = (code: string) => COUNTRIES[code] ?? code;
+
+type Form = { journalist: string; event: string; gold: string; silver: string; bronze: string };
 
 export function PodiumPage() {
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<Form>({
+    journalist: '',
+    event: '',
+    gold: '',
+    silver: '',
+    bronze: '',
+  });
   const [result, setResult] = useState<PodiumResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
 
-  const field = (name: keyof typeof EMPTY, label: string, placeholder: string, upper = false) => (
+  const medals = [form.gold, form.silver, form.bronze];
+  const complete = form.journalist.trim() !== '' && form.event !== '' && medals.every(Boolean);
+  const duplicate = medals.every(Boolean) && new Set(medals).size < 3;
+
+  // Vérification en temps réel : dès que le podium est complet et sans doublon.
+  useEffect(() => {
+    if (!complete || duplicate) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      podiumsApi.submit({ ...form, journalist: form.journalist.trim() }).then(
+        (podium) => {
+          if (!cancelled) {
+            setResult(podium);
+            setError(null);
+          }
+        },
+        () => {
+          if (!cancelled) setError('Vérification impossible : l’API ne répond pas.');
+        },
+      );
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [form, complete, duplicate]);
+
+  const set = (name: keyof Form) => (value: string) => setForm({ ...form, [name]: value });
+
+  const countrySelect = (name: 'gold' | 'silver' | 'bronze', label: string) => (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={name}>{label}</Label>
-      <Input
-        id={name}
-        value={form[name]}
-        placeholder={placeholder}
-        maxLength={upper ? 3 : 100}
-        onChange={(e) =>
-          setForm({ ...form, [name]: upper ? e.target.value.toUpperCase() : e.target.value })
-        }
-      />
+      <NativeSelect id={name} value={form[name]} onChange={(e) => set(name)(e.target.value)}>
+        <option value="">Choisir un pays</option>
+        {Object.entries(COUNTRIES).map(([code, nameFr]) => (
+          <option key={code} value={code}>
+            {nameFr} ({code})
+          </option>
+        ))}
+      </NativeSelect>
     </div>
   );
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    try {
-      setResult(await podiumsApi.submit(form));
-    } catch {
-      setResult(null);
-      setError('Saisie refusée : vérifiez les noms et les codes pays (3 lettres, sans doublon).');
-    } finally {
-      setPending(false);
-    }
-  }
-
-  const status = result ? STATUS_STYLES[result.status] : null;
+  // Un ancien résultat n'est plus montré dès que le podium redevient incomplet.
+  const shown = complete && !duplicate ? result : null;
+  const status = shown ? STATUS_STYLES[shown.status] : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,25 +124,54 @@ export function PodiumPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Saisir le podium constaté</CardTitle>
+          <CardTitle>Le podium constaté</CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {field('journalist', 'Journaliste', 'Awa')}
-              {field('event', 'Épreuve', '100 m filles')}
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="journalist">Journaliste</Label>
+              <Input
+                id="journalist"
+                value={form.journalist}
+                placeholder="Votre nom"
+                maxLength={100}
+                onChange={(e) => set('journalist')(e.target.value)}
+              />
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {field('gold', '🥇 Or', 'CIV', true)}
-              {field('silver', '🥈 Argent', 'EGY', true)}
-              {field('bronze', '🥉 Bronze', 'JPN', true)}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="event">Épreuve</Label>
+              <NativeSelect
+                id="event"
+                value={form.event}
+                onChange={(e) => set('event')(e.target.value)}
+              >
+                <option value="">Choisir une épreuve</option>
+                {EVENTS.map((event) => (
+                  <option key={event} value={event}>
+                    {event}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
-            <Button type="submit" disabled={pending} className="self-start">
-              {pending ? 'Vérification…' : 'Vérifier le podium'}
-            </Button>
-          </form>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {countrySelect('gold', '🥇 Or')}
+            {countrySelect('silver', '🥈 Argent')}
+            {countrySelect('bronze', '🥉 Bronze')}
+          </div>
+          {!complete && !duplicate && (
+            <p className="text-sm text-muted-foreground">
+              Le résultat s’affiche automatiquement dès que le podium est complet.
+            </p>
+          )}
         </CardContent>
       </Card>
+
+      {duplicate && (
+        <p role="alert" className="rounded-lg border border-red-600 bg-red-50 p-4 text-red-800">
+          Un même pays ne peut pas recevoir deux médailles.
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="rounded-lg border border-red-600 bg-red-50 p-4 text-red-800">
@@ -102,23 +179,24 @@ export function PodiumPage() {
         </p>
       )}
 
-      {result && status && (
+      {shown && status && (
         <section
           aria-live="polite"
           className={`flex flex-col gap-3 rounded-xl border-2 p-5 ${status.className}`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-xl font-semibold">{result.event}</h2>
+            <h2 className="text-xl font-semibold">{shown.event}</h2>
             <span className="rounded-full border border-current px-3 py-1 text-sm font-bold">
               {status.label}
             </span>
           </div>
           <p>{status.text}</p>
           <p className="font-medium">
-            🥇 {result.gold} · 🥈 {result.silver} · 🥉 {result.bronze}
-            <span className="font-normal"> — saisi par {result.journalist}</span>
+            🥇 {countryName(shown.gold)} · 🥈 {countryName(shown.silver)} · 🥉{' '}
+            {countryName(shown.bronze)}
+            <span className="font-normal"> — saisi par {shown.journalist}</span>
           </p>
-          {result.gaps.length > 0 && (
+          {shown.gaps.length > 0 && (
             <table className="w-full text-left text-sm">
               <thead>
                 <tr>
@@ -128,11 +206,11 @@ export function PodiumPage() {
                 </tr>
               </thead>
               <tbody>
-                {result.gaps.map((gap) => (
+                {shown.gaps.map((gap) => (
                   <tr key={gap.medal} className="border-t border-current/30">
                     <td className="py-1">{MEDAL_LABELS[gap.medal]}</td>
-                    <td className="py-1 line-through">{gap.submitted}</td>
-                    <td className="py-1 font-bold">{gap.official}</td>
+                    <td className="py-1 line-through">{countryName(gap.submitted)}</td>
+                    <td className="py-1 font-bold">{countryName(gap.official)}</td>
                   </tr>
                 ))}
               </tbody>
