@@ -1,4 +1,4 @@
-import { VOLUNTEER_NAME_MAX_LENGTH } from '@joj/shared';
+import { VOLUNTEER_EMAIL_MAX_LENGTH, VOLUNTEER_NAME_MAX_LENGTH } from '@joj/shared';
 import { VolunteersError } from './volunteers.errors';
 
 export interface RegistrationProps {
@@ -77,6 +77,12 @@ function validName(name: string): string {
 
 function validEmail(email: string): string {
   const trimmed = email.trim();
+  if (trimmed.length > VOLUNTEER_EMAIL_MAX_LENGTH) {
+    throw new VolunteersError(
+      'REGISTRATION_EMAIL_TOO_LONG',
+      `A volunteer email has at most ${VOLUNTEER_EMAIL_MAX_LENGTH} characters`,
+    );
+  }
   if (!EMAIL_PATTERN.test(trimmed)) {
     throw new VolunteersError('REGISTRATION_EMAIL_INVALID', 'A volunteer needs a valid email', {
       email: trimmed,

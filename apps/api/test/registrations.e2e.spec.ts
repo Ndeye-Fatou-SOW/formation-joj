@@ -75,6 +75,7 @@ describe('/api/slots/:slotId/registrations (e2e)', () => {
     [{ name: '', email: 'awa@example.sn' }, 'name'],
     [{ name: 'x'.repeat(101), email: 'awa@example.sn' }, 'name'],
     [{ name: 'Awa Diop', email: 'awa@' }, 'email'],
+    [{ name: 'Awa Diop', email: 'a'.repeat(250) + '@example.sn' }, 'email'],
   ])('001-AS6: rejects an invalid registration %j (400, RFC 9457)', async (body, path) => {
     const slotId = await openSlot();
 

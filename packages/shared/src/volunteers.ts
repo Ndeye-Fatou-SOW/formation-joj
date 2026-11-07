@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 export const VOLUNTEER_NAME_MAX_LENGTH = 100;
+/** Longueur maximale d'une adresse email (RFC 5321), alignée sur la colonne en base. */
+export const VOLUNTEER_EMAIL_MAX_LENGTH = 254;
 
 /** Corps de `POST /api/slots`. */
 export const createSlotSchema = z
@@ -34,7 +36,7 @@ export const slotIdParamsSchema = z.object({ slotId: z.uuid() });
 /** Corps de `POST /api/slots/:slotId/registrations`. */
 export const registerVolunteerSchema = z.object({
   name: z.string().trim().min(1).max(VOLUNTEER_NAME_MAX_LENGTH),
-  email: z.string().trim().pipe(z.email()),
+  email: z.string().trim().max(VOLUNTEER_EMAIL_MAX_LENGTH).pipe(z.email()),
 });
 export type RegisterVolunteerInput = z.infer<typeof registerVolunteerSchema>;
 

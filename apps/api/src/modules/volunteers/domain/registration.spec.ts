@@ -31,6 +31,12 @@ describe('Registration', () => {
     );
   });
 
+  it('001-AS6: rejects an email that is too long', () => {
+    expect(() => newRegistration('Awa Diop', 'a'.repeat(250) + '@example.sn')).toThrow(
+      expect.objectContaining({ code: 'REGISTRATION_EMAIL_TOO_LONG', kind: 'VALIDATION' }),
+    );
+  });
+
   it.each(['', 'awa', 'awa@', '@example.sn', 'awa diop@example.sn'])(
     '001-AS6: rejects a malformed email (%j)',
     (email) => {

@@ -16,6 +16,8 @@ const VOLUNTEERS_ERROR_KINDS = {
   REGISTRATION_NAME_REQUIRED: 'VALIDATION',
   REGISTRATION_NAME_TOO_LONG: 'VALIDATION',
   REGISTRATION_EMAIL_INVALID: 'VALIDATION',
+  /** Email plus long que la colonne en base (254 caractères). */
+  REGISTRATION_EMAIL_TOO_LONG: 'VALIDATION',
 } as const satisfies Record<string, ErrorKind>;
 
 export type VolunteersErrorCode = keyof typeof VOLUNTEERS_ERROR_KINDS;
