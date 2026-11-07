@@ -1,5 +1,9 @@
 # JOJ Dakar 2026 : repo de départ du bootcamp Claude Code
 
+> **Ndam** — Pour les journalistes des JOJ Dakar 2026 : chaque podium saisi est comparé au résultat officiel des Jeux, et devient certifié, en écart (avec les différences) ou provisoire, avant d'être publié.
+> **Lancer** : `pnpm install`, puis `pnpm dev`, et ouvrir http://localhost:5173/podiums (exemple : épreuve « 100 m filles », CIV, EGY, JPN).
+> **Ce qui manque** : les podiums sont gardés en mémoire (perdus au redémarrage), les résultats officiels sont fixés dans le code ; publier un résultat officiel (TR2), le tableau des médailles (TR3) et l'explication par l'IA (TR4).
+
 Un monorepo pnpm : une API NestJS, un front React et des schémas partagés. Une fonctionnalité d'exemple, **Disciplines**, montre toute la chaîne, du schéma partagé à l'écran.
 
 Les énoncés de la formation (prise en main, ateliers A, B et C) et la description du projet sont dans [`task/`](task/README.md).

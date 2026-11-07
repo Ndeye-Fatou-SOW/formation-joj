@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PodiumsRouteImport } from './routes/podiums'
 import { Route as DisciplinesIndexRouteImport } from './routes/disciplines.index'
 import { Route as DisciplinesDisciplineIdRouteImport } from './routes/disciplines.$disciplineId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PodiumsRoute = PodiumsRouteImport.update({
+  id: '/podiums',
+  path: '/podiums',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DisciplinesIndexRoute = DisciplinesIndexRouteImport.update({
@@ -31,30 +37,39 @@ const DisciplinesDisciplineIdRoute = DisciplinesDisciplineIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/podiums': typeof PodiumsRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
   '/disciplines/': typeof DisciplinesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/podiums': typeof PodiumsRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
   '/disciplines': typeof DisciplinesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/podiums': typeof PodiumsRoute
   '/disciplines/$disciplineId': typeof DisciplinesDisciplineIdRoute
   '/disciplines/': typeof DisciplinesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/disciplines/$disciplineId' | '/disciplines/'
+  fullPaths: '/' | '/podiums' | '/disciplines/$disciplineId' | '/disciplines/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/disciplines/$disciplineId' | '/disciplines'
-  id: '__root__' | '/' | '/disciplines/$disciplineId' | '/disciplines/'
+  to: '/' | '/podiums' | '/disciplines/$disciplineId' | '/disciplines'
+  id:
+    | '__root__'
+    | '/'
+    | '/podiums'
+    | '/disciplines/$disciplineId'
+    | '/disciplines/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PodiumsRoute: typeof PodiumsRoute
   DisciplinesDisciplineIdRoute: typeof DisciplinesDisciplineIdRoute
   DisciplinesIndexRoute: typeof DisciplinesIndexRoute
 }
@@ -66,6 +81,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/podiums': {
+      id: '/podiums'
+      path: '/podiums'
+      fullPath: '/podiums'
+      preLoaderRoute: typeof PodiumsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disciplines/': {
@@ -87,6 +109,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PodiumsRoute: PodiumsRoute,
   DisciplinesDisciplineIdRoute: DisciplinesDisciplineIdRoute,
   DisciplinesIndexRoute: DisciplinesIndexRoute,
 }
